@@ -1,49 +1,44 @@
-# Module 1: Constants and Input Validation
+# # Module 1: Constants and Input Validation
 
 SECTIONS = ["A", "B", "C"]
 DAYS = ["MON", "TUE", "WED", "THU", "FRI"]
 PERIODS = [1, 2, 3, 4, 5, 6, 7]
 
 
-def read_section():
+def main():
+    timetable = load_timetable()
+
     while True:
-        section = input("Enter section (A/B/C): ").upper().strip()
+        print("\n===== CLASS TIMETABLE MANAGER =====")
+        print("1. Assign a slot")
+        print("2. Display section timetable")
+        print("3. Show faculty free periods")
+        print("4. Count subject hours")
+        print("5. Change a slot")
+        print("6. Clear a slot")
+        print("7. Faculty workload report")
+        print("8. Export section timetable")
+        print("9. Exit")
 
-        if section in SECTIONS:
-            return section
-        else:
-            print("Invalid section. Try again.")
+        choice = input("Enter choice: ").strip()
 
-
-def read_day():
-    while True:
-        day = input("Enter day (MON-FRI): ").upper().strip()
-
-        if day in DAYS:
-            return day
-        else:
-            print("Invalid day. Try again.")
-
-
-def read_period():
-    while True:
-        try:
-            period = int(input("Enter period (1-7): "))
-
-            if period in PERIODS:
-                return period
-            else:
-                print("Period must be between 1 and 7.")
-
-        except ValueError:
-            print("Please enter a valid number.")
-
-
-
-section = read_section()
-day = read_day()
-period = read_period()
-
-print("Section:", section)
-print("Day:", day)
-print("Period:", period)
+        if choice == "1":
+            assign_slot(timetable)
+        elif choice == "2":
+            display_section_timetable(timetable)
+        elif choice == "3":
+            show_faculty_free_periods(timetable)
+        elif choice == "4":
+            count_subject_hours(timetable)
+        elif choice == "5":
+            change_slot(timetable)
+        elif choice == "6":
+            clear_slot(timetable)
+        elif choice == "7":
+            faculty_workload_report(timetable)
+        elif choice == "8":
+            export_section_timetable(timetable)
+        elif choice == "9":
+            save_timetable(timetable)
+            print("Exiting program. Goodbye!")
+            break
