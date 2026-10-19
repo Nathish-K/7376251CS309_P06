@@ -1,0 +1,2 @@
+Section|Day|Period|Subject|Faculty|Room
+A|MON|1|PYTHON|Ravi|R101
