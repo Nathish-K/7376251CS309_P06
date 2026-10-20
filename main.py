@@ -129,10 +129,56 @@ def save_timetable(timetable):
             file.write(line)
 
 
+# MODULE 3: SEARCH AND CLASH DETECTION
+
+def find_slot(timetable, section, day, period):
+    for record in timetable:
+        if (
+            record["section"] == section
+            and record["day"] == day
+            and record["period"] == period
+        ):
+            return record
+    return None
+
+
+def check_clash(
+    timetable, section, day, period, faculty, room,
+    show_message=True
+):
+    for record in timetable:
+        if (
+            record["day"] != day
+            or record["period"] != period
+            or record["section"] == section
+        ):
+            continue
+
+        if record["faculty"].casefold() == faculty.casefold():
+            if show_message:
+                print(
+                    f'Clash: {faculty} already teaches '
+                    f'Section {record["section"]} on '
+                    f'{day} period {period}.'
+                )
+            return True
+
+        if record["room"].casefold() == room.casefold():
+            if show_message:
+                print(
+                    f'Clash: {room} is booked by '
+                    f'Section {record["section"]} on '
+                    f'{day} period {period}.'
+                )
+            return True
+
+    return False
 
 
 
 
+
+# MODULE 12: MAIN MENU
 
 def main():
     timetable = load_timetable()
