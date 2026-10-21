@@ -168,7 +168,7 @@ def check_clash(
                 print(
                     f'Clash: {room} is booked by '
                     f'Section {record["section"]} on '
-                    f'{day} period {period}.'-
+                    f'{day} period {period}.'
                 )
             return True
 
