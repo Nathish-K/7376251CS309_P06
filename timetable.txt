@@ -1,2 +1,3 @@
 Section|Day|Period|Subject|Faculty|Room
 A|MON|1|PYTHON|Ravi|R101
+A|TUE|3|DSA|Divagar|DS209
