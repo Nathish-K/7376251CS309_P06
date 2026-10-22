@@ -1,7 +1,4 @@
-
-# P06: CLASS TIMETABLE MANAGER
-
-# MODULE 1: CONSTANTS AND INPUT VALIDATION
+# CLASS TIMETABLE MANAGER
 
 SECTIONS = ["A", "B", "C"]
 DAYS = ["MON", "TUE", "WED", "THU", "FRI"]
@@ -9,9 +6,11 @@ PERIODS = [1, 2, 3, 4, 5, 6, 7]
 FILENAME = "timetable.txt"
 
 
+# 1. GET VALID INPUT
+
 def read_section():
     while True:
-        section = input("Enter section (A/B/C): ").upper().strip()
+        section = input("Enter section (A/B/C): ").strip().upper()
         if section in SECTIONS:
             return section
         print("Invalid section. Try again.")
@@ -19,7 +18,7 @@ def read_section():
 
 def read_day():
     while True:
-        day = input("Enter day (MON-FRI): ").upper().strip()
+        day = input("Enter day (MON-FRI): ").strip().upper()
         if day in DAYS:
             return day
         print("Invalid day. Try again.")
@@ -33,18 +32,52 @@ def read_period():
                 return period
             print("Period must be between 1 and 7.")
         except ValueError:
-            print("Please enter a valid number.")
+            print("Please enter a number.")
 
 
-def read_text(prompt):
+def read_text(message):
     while True:
-        value = input(prompt).strip()
-        if value and "|" not in value:
+        value = input(message).strip()
+        if value != "" and "|" not in value:
             return value
         print("Value cannot be empty or contain |.")
 
 
-# MODULE 2: FILE HANDLING
+# 2. FIND A TIMETABLE SLOT
+
+def find_slot(timetable, section, day, period):
+    for record in timetable:
+        if (record["section"] == section
+                and record["day"] == day
+                and record["period"] == period):
+            return record
+    return None
+
+
+# 3. CHECK FACULTY AND ROOM CLASHES
+
+def check_clash(timetable, section, day, period, faculty, room,
+                show_message=True):
+    for record in timetable:
+        if record["day"] != day or record["period"] != period:
+            continue
+        if record["section"] == section:
+            continue
+
+        if record["faculty"].lower() == faculty.lower():
+            if show_message:
+                print(f"Clash: {faculty} is already teaching "
+                      f"Section {record['section']} at {day}, period {period}.")
+            return True
+
+        if record["room"].lower() == room.lower():
+            if show_message:
+                print(f"Clash: room {room} is already booked "
+                      f"by Section {record['section']} at {day}, period {period}.")
+            return True
+
+    return False
+
 
 def load_timetable():
     timetable = []
@@ -54,70 +87,70 @@ def load_timetable():
             for line in file:
                 fields = line.strip().split("|")
 
-                # Skip the header and malformed rows.
+                # Each valid row must contain six values.
                 if len(fields) != 6 or fields[0] == "Section":
                     continue
+
+                section = fields[0]
+                day = fields[1]
+                subject = fields[3].strip()
+                faculty = fields[4].strip()
+                room = fields[5].strip()
 
                 try:
                     period = int(fields[2])
                 except ValueError:
                     continue
 
-                section, day, _, subject, faculty, room = fields
+                if section not in SECTIONS or day not in DAYS:
+                    continue
+                if period not in PERIODS:
+                    continue
+                if subject == "" or faculty == "" or room == "":
+                    continue
 
-                if (
-                    section not in SECTIONS
-                    or day not in DAYS
-                    or period not in PERIODS
-                    or not subject.strip()
-                    or not faculty.strip()
-                    or not room.strip()
-                ):
+                # Do not load a slot that is already occupied.
+                if find_slot(timetable, section, day, period) is not None:
+                    print("Warning: duplicate slot skipped.")
+                    continue
+
+                # Do not load entries with faculty or room clashes.
+                if check_clash(timetable, section, day, period,
+                               faculty, room, False):
+                    print("Warning: conflicting entry skipped.")
                     continue
 
                 record = {
                     "section": section,
                     "day": day,
                     "period": period,
-                    "subject": subject.strip(),
-                    "faculty": faculty.strip(),
-                    "room": room.strip()
+                    "subject": subject,
+                    "faculty": faculty,
+                    "room": room
                 }
-
-                # Do not load duplicate slots or clashes.
-                if find_slot(
-                    timetable, section, day, period
-                ) is not None:
-                    print("Warning: Duplicate slot skipped.")
-                    continue
-
-                if check_clash(
-                    timetable, section, day, period,
-                    faculty, room, show_message=False
-                ):
-                    print("Warning: Conflicting entry skipped.")
-                    continue
-
                 timetable.append(record)
 
     except FileNotFoundError:
-        print("No timetable file found. Starting empty.")
+        print("No timetable file found. Starting with an empty timetable.")
 
     return timetable
 
 
 def save_timetable(timetable):
+    # Save records in section, day, and period order.
+    sorted_timetable = []
+
+    for section in SECTIONS:
+        for day in DAYS:
+            for period in PERIODS:
+                record = find_slot(timetable, section, day, period)
+                if record is not None:
+                    sorted_timetable.append(record)
+
     with open(FILENAME, "w", encoding="utf-8") as file:
         file.write("Section|Day|Period|Subject|Faculty|Room\n")
 
-        for record in sorted(
-            timetable,
-            key=lambda r: (
-                SECTIONS.index(r["section"]),
-                DAYS.index(r["day"]),
-                r["period"]
-            )
-        ):
+        for record in sorted_timetable:
             line = (
                 record["section"] + "|"
                 + record["day"] + "|"
@@ -129,98 +162,50 @@ def save_timetable(timetable):
             file.write(line)
 
 
-# MODULE 3: SEARCH AND CLASH DETECTION
-
-def find_slot(timetable, section, day, period):
-    for record in timetable:
-        if (
-            record["section"] == section
-            and record["day"] == day
-            and record["period"] == period
-        ):
-            return record
-    return None
-
-
-def check_clash(
-    timetable, section, day, period, faculty, room,
-    show_message=True
-):
-    for record in timetable: 
-        if (
-            record["day"] != day
-            or record["period"] != period
-            or record["section"] == section
-        ):
-            continue
-
-        if record["faculty"].casefold() == faculty.casefold():
-            if show_message:
-                print(
-                    f'Clash: {faculty} already teaches '
-                    f'Section {record["section"]} on '
-                    f'{day} period {period}.'
-                )
-            return True
-
-        if record["room"].casefold() == room.casefold():
-            if show_message:
-                print(
-                    f'Clash: {room} is booked by '
-                    f'Section {record["section"]} on '
-                    f'{day} period {period}.'
-                )
-            return True
-
-    return False
-
-
-# MODULE 4: ASSIGN A SLOT
+# 5. ASSIGN A NEW SLOT
 
 def assign_slot(timetable):
     section = read_section()
     day = read_day()
     period = read_period()
 
-    if find_slot(timetable, section, day, period):
-        print("This section already has an assignment in that slot.")
-        print("Use Change Slot to replace it.")
+    if find_slot(timetable, section, day, period) is not None:
+        print("This section already has a class in that slot.")
+        print("Use Change a slot to replace it.")
         return
 
     subject = read_text("Enter subject: ").upper()
     faculty = read_text("Enter faculty name: ")
     room = read_text("Enter room: ")
 
-    if check_clash(
-        timetable, section, day, period, faculty, room
-    ):
+    if check_clash(timetable, section, day, period, faculty, room):
         print("Assignment rejected.")
         return
 
-    timetable.append({
+    record = {
         "section": section,
         "day": day,
         "period": period,
         "subject": subject,
         "faculty": faculty,
         "room": room
-    })
-
+    }
+    timetable.append(record)
     save_timetable(timetable)
     print("Slot assigned successfully.")
 
 
-# MODULE 5: DISPLAY SECTION TIMETABLE
+# 6. DISPLAY A SECTION'S TIMETABLE
 
 def display_section_timetable(timetable):
     section = read_section()
 
-    print(f"\nSECTION {section} TIMETABLE")
+    print(f"\nTIMETABLE FOR SECTION {section}")
     print("-" * 105)
 
-    print(f'{"DAY":<8}', end="")
+    print(f"{'DAY':<8}", end="")
     for period in PERIODS:
-        print(f"P{period:<13}", end="")
+        print(f"{('P' + str(period)):<13}", end="")
     print()
 
     for day in DAYS:
@@ -229,80 +214,86 @@ def display_section_timetable(timetable):
         for period in PERIODS:
             record = find_slot(timetable, section, day, period)
 
-            if record:
-                cell = (
-                    f'{record["subject"]} '
-                    f'({record["faculty"]}, {record["room"]})'
-                )
-            else:
+            if record is None:
                 cell = "---"
+            else:
+                cell = record["subject"] + " (" + record["room"] + ")"
 
             print(f"{cell[:12]:<13}", end="")
-
         print()
 
     print("-" * 105)
+    print("Note: each timetable cell shows the subject and room.")
 
 
-# MODULE 6: FACULTY FREE PERIODS
+# 7. SHOW A FACULTY MEMBER'S FREE PERIODS
 
 def show_faculty_free_periods(timetable):
     faculty = read_text("Enter faculty name: ")
+    found = False
 
-    faculty_entries = [
-        record for record in timetable
-        if record["faculty"].casefold() == faculty.casefold()
-    ]
+    for record in timetable:
+        if record["faculty"].lower() == faculty.lower():
+            found = True
+            break
 
-    if not faculty_entries:
+    if not found:
         print("Faculty not found in the timetable.")
         return
 
     print(f"\nFREE PERIODS FOR {faculty}")
 
     for day in DAYS:
-        occupied = [
-            record["period"] for record in faculty_entries
-            if record["day"] == day
-        ]
+        occupied_periods = []
 
-        free = [
-            period for period in PERIODS
-            if period not in occupied
-        ]
+        for record in timetable:
+            if (record["faculty"].lower() == faculty.lower()
+                    and record["day"] == day):
+                occupied_periods.append(record["period"])
 
-        if free:
-            print(f"{day}: {', '.join(map(str, free))}")
+        free_periods = []
+        for period in PERIODS:
+            if period not in occupied_periods:
+                free_periods.append(str(period))
+
+        if len(free_periods) > 0:
+            print(day + ": " + ", ".join(free_periods))
         else:
-            print(f"{day}: No free periods")
+            print(day + ": No free periods")
 
 
-# MODULE 7: COUNT WEEKLY SUBJECT HOURS
+# 8. COUNT WEEKLY SUBJECT PERIODS
 
 def count_subject_hours(timetable):
     section = read_section()
-    counts = {}
+    subject_counts = {}
 
     for record in timetable:
         if record["section"] == section:
             subject = record["subject"].upper()
-            counts[subject] = counts.get(subject, 0) + 1
+
+            if subject not in subject_counts:
+                subject_counts[subject] = 0
+            subject_counts[subject] += 1
 
     print(f"\nWEEKLY SUBJECT HOURS - SECTION {section}")
     print("-" * 40)
 
-    if not counts:
+    if len(subject_counts) == 0:
         print("No subjects assigned.")
         return
 
-    for subject, hours in sorted(counts.items()):
+    total = 0
+    for subject in sorted(subject_counts):
+        hours = subject_counts[subject]
         print(f"{subject:<25} {hours} periods")
+        total += hours
 
     print("-" * 40)
-    print("Total periods:", sum(counts.values()))
+    print("Total periods:", total)
 
 
-# MODULE 8: CHANGE A SLOT
+# 9. CHANGE AN EXISTING SLOT
 
 def change_slot(timetable):
     section = read_section()
@@ -312,44 +303,38 @@ def change_slot(timetable):
     old_record = find_slot(timetable, section, day, period)
 
     if old_record is None:
-        print("No assignment exists in this slot.")
+        print("No class is assigned to this slot.")
         return
 
-    print(
-        "Current:",
-        old_record["subject"],
-        "|", old_record["faculty"],
-        "|", old_record["room"]
-    )
+    print("Current class:", old_record["subject"],
+          "|", old_record["faculty"], "|", old_record["room"])
 
     subject = read_text("Enter new subject: ").upper()
-    faculty = read_text("Enter new faculty: ")
+    faculty = read_text("Enter new faculty name: ")
     room = read_text("Enter new room: ")
 
-    # Temporarily remove the old entry for clash checking.
+    # Remove the old class temporarily while checking clashes.
     timetable.remove(old_record)
 
-    if check_clash(
-        timetable, section, day, period, faculty, room
-    ):
+    if check_clash(timetable, section, day, period, faculty, room):
         timetable.append(old_record)
-        print("Change rejected. Original slot restored.")
+        print("Change rejected. The original class has been restored.")
         return
 
-    timetable.append({
+    new_record = {
         "section": section,
         "day": day,
         "period": period,
         "subject": subject,
         "faculty": faculty,
         "room": room
-    })
-
+    }
+    timetable.append(new_record)
     save_timetable(timetable)
     print("Slot changed successfully.")
 
 
-# MODULE 9: CLEAR A SLOT
+# 10. CLEAR A SLOT
 
 def clear_slot(timetable):
     section = read_section()
@@ -359,7 +344,7 @@ def clear_slot(timetable):
     record = find_slot(timetable, section, day, period)
 
     if record is None:
-        print("The selected slot is already empty.")
+        print("This slot is already empty.")
         return
 
     timetable.remove(record)
@@ -367,56 +352,55 @@ def clear_slot(timetable):
     print("Slot cleared successfully.")
 
 
-# MODULE 10: FACULTY WORKLOAD REPORT
+# 11. SHOW FACULTY WORKLOAD
 
 def faculty_workload_report(timetable):
     workload = {}
 
     for record in timetable:
         faculty = record["faculty"]
-        workload[faculty] = workload.get(faculty, 0) + 1
+
+        if faculty not in workload:
+            workload[faculty] = 0
+        workload[faculty] += 1
 
     print("\nFACULTY WEEKLY WORKLOAD")
     print("-" * 40)
 
-    if not workload:
+    if len(workload) == 0:
         print("No assignments available.")
         return
 
-    for faculty, periods in sorted(
-        workload.items(), key=lambda item: item[0].casefold()
-    ):
-        print(f"{faculty:<25} {periods} periods")
+    for faculty in sorted(workload, key=str.lower):
+        print(f"{faculty:<25} {workload[faculty]} periods")
 
 
-# MODULE 11: EXPORT SECTION TIMETABLE
+# 12. EXPORT A SECTION'S TIMETABLE
 
 def export_section_timetable(timetable):
     section = read_section()
-    filename = f"section_{section}_timetable.txt"
+    filename = "section_" + section + "_timetable.txt"
 
     try:
         with open(filename, "w", encoding="utf-8") as file:
-            file.write(f"SECTION {section} TIMETABLE\n\n")
+            file.write(f"TIMETABLE FOR SECTION {section}\n\n")
             file.write("DAY\t" + "\t".join(
-                f"P{p}" for p in PERIODS
+                ["P" + str(period) for period in PERIODS]
             ) + "\n")
 
             for day in DAYS:
                 cells = []
 
                 for period in PERIODS:
-                    record = find_slot(
-                        timetable, section, day, period
-                    )
+                    record = find_slot(timetable, section, day, period)
 
-                    if record:
-                        cells.append(
-                            f'{record["subject"]} '
-                            f'({record["faculty"]}, {record["room"]})'
-                        )
-                    else:
+                    if record is None:
                         cells.append("---")
+                    else:
+                        cell = (record["subject"] + " ("
+                                + record["faculty"] + ", "
+                                + record["room"] + ")")
+                        cells.append(cell)
 
                 file.write(day + "\t" + "\t".join(cells) + "\n")
 
@@ -426,7 +410,7 @@ def export_section_timetable(timetable):
         print("Export failed:", error)
 
 
-# MODULE 12: MAIN MENU
+# 13. MAIN MENU
 
 def main():
     timetable = load_timetable()
@@ -446,41 +430,31 @@ def main():
         print("0. Exit")
 
         choice = input("Enter choice: ").strip()
-
+2
         try:
             if choice == "1":
                 assign_slot(timetable)
-
             elif choice == "2":
                 display_section_timetable(timetable)
-
             elif choice == "3":
                 show_faculty_free_periods(timetable)
-
             elif choice == "4":
                 count_subject_hours(timetable)
-
             elif choice == "5":
                 change_slot(timetable)
-
             elif choice == "6":
                 clear_slot(timetable)
-
             elif choice == "7":
                 faculty_workload_report(timetable)
-
             elif choice == "8":
                 export_section_timetable(timetable)
-
             elif choice == "9":
                 save_timetable(timetable)
                 print("Timetable saved.")
-
             elif choice == "0":
                 save_timetable(timetable)
                 print("Exiting program. Goodbye!")
                 break
-
             else:
                 print("Invalid choice. Enter a number from 0 to 9.")
 
